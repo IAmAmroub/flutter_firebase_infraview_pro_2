@@ -6,6 +6,7 @@ import '../models/asset_model.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/location_service.dart';
+import 'work_log_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -76,6 +77,17 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Home Screen'),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.assignment),
+            tooltip: 'Work Log',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const WorkLogScreen(),
+                ),
+              );
+            },
+          ),
           IconButton(
             onPressed: () async {
               await _authService.signOut();
