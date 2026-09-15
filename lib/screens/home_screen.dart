@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../models/asset_model.dart';
+import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/location_service.dart';
 
@@ -13,99 +15,156 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  // final authService = AuthService();
-  final firestoreService = FirestoreService();
+  final _authService = AuthService();
+  final _firestoreService = FirestoreService();
+  final _locationService = LocationService();
+
+  LatLng? _currentLocation;
+  bool _isLoadingLocation = true;
+  String? _locationError;
+
+  @override
+  void initState() {
+    _loadCurrentLocation();
+    super.initState();
+  }
+
+  Future<void> _loadCurrentLocation() async {
+    try {
+      final position = await _locationService.getCurrentLocation();
+
+      if (!mounted) return;
+
+      setState(() {
+        _currentLocation = LatLng(
+          position.latitude,
+          position.longitude,
+        );
+
+        _isLoadingLocation = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _locationError = error.toString();
+        _isLoadingLocation = false;
+      });
+    }
+  }
+
+  Set<Marker> _createAssetMarkers(List<AssetModel> assets) {
+    return assets.map((asset) {
+      return Marker(
+        markerId: MarkerId(asset.id),
+        position: LatLng(
+          asset.latitude,
+          asset.longitude,
+        ),
+        infoWindow: InfoWindow(
+          title: asset.location,
+          snippet: 'Status: ${asset.status}',
+        ),
+      );
+    }).toSet();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Home Page'),
+        title: const Text('Home Screen'),
+        centerTitle: true,
         actions: [
           IconButton(
             onPressed: () async {
-              await FirebaseAuth.instance.signOut();
+              await _authService.signOut();
             },
             icon: const Icon(Icons.logout),
           ),
         ],
       ),
-      body: ElevatedButton(
-        onPressed: () async {
-          try {
-            final position = await LocationService().getCurrentLocation();
+      body: _buildBody(),
+    );
+  }
 
-            if (!mounted) return;
+  Widget _buildBody() {
+    if (_isLoadingLocation) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Lat: ${position.latitude}, '
-                  'Lng: ${position.longitude}',
-                ),
+    if (_locationError != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.location_off,
+                size: 64,
               ),
-            );
-          } catch (error) {
-            if (!mounted) return;
-
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(error.toString()),
+              const SizedBox(height: 16),
+              Text(
+                _locationError!,
+                textAlign: TextAlign.center,
               ),
-            );
-          }
-        },
-        child: const Text('Get Current Location'),
-      ),
-      // StreamBuilder<List<AssetModel>>(
-      //   stream: firestoreService.getAssets(),
-      //   builder: (context, snapshot) {
-      //     if (snapshot.connectionState == ConnectionState.waiting) {
-      //       return const Center(
-      //         child: CircularProgressIndicator(),
-      //       );
-      //     }
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    _locationError = null;
+                    _isLoadingLocation = true;
+                  });
 
-      //     if (snapshot.hasError) {
-      //       return const Center(
-      //         child: Text('Failed to load assets.'),
-      //       );
-      //     }
+                  _loadCurrentLocation();
+                },
+                child: const Text('Try Again'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
-      //     final assets = snapshot.data ?? [];
+    final currentLocation = _currentLocation;
 
-      //     if (assets.isEmpty) {
-      //       return const Center(
-      //         child: Text('No assets available.'),
-      //       );
-      //     }
+    if (currentLocation == null) {
+      return const Center(
+        child: Text('Current location is unavailable.'),
+      );
+    }
 
-      //     return ListView.builder(
-      //       padding: const EdgeInsets.all(16),
-      //       itemCount: assets.length,
-      //       itemBuilder: (context, index) {
-      //         final asset = assets[index];
+    return StreamBuilder<List<AssetModel>>(
+      stream: _firestoreService.getAssets(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(
+            child: Text('Failed to load asset locations.'),
+          );
+        }
 
-      //         return Card(
-      //           margin: const EdgeInsets.only(bottom: 12),
-      //           child: ListTile(
-      //             leading: const CircleAvatar(
-      //               child: Icon(Icons.location_city),
-      //             ),
-      //             title: Text(asset.location),
-      //             subtitle: Text(
-      //               'ID: ${asset.id}\n'
-      //               'Status: ${asset.status}\n'
-      //               'Lat: ${asset.latitude}, Lng: ${asset.longitude}',
-      //             ),
-      //             isThreeLine: true,
-      //           ),
-      //         );
-      //       },
-      //     );
-      //   },
-      // ),
+        final assets = snapshot.data ?? [];
+        final markers = _createAssetMarkers(assets);
+
+        return GoogleMap(
+          initialCameraPosition: CameraPosition(
+            target: currentLocation,
+            zoom: 14,
+          ),
+          markers: markers,
+
+          // Requires location permission.
+          myLocationEnabled: true,
+
+          // Displays Google's current-location button.
+          myLocationButtonEnabled: true,
+
+          zoomControlsEnabled: true,
+        );
+      },
     );
   }
 }

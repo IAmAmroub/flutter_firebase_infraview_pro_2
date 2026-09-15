@@ -57,4 +57,8 @@ class AuthService {
       SnackBar(content: Text(message)),
     );
   }
+
+  signOut() {
+    FirebaseAuth.instance.signOut();
+  }
 }
