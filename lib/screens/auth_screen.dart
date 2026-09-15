@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../services/firestore_service.dart';
 import 'home_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -11,6 +12,8 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
+  final FirestoreService _firestoreService = FirestoreService();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -43,14 +46,28 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> signup() async {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
     final isValid = _keyForm.currentState!.validate();
+
     if (isValid) {
       try {
         final credential =
             await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: _emailController.text,
-          password: _passwordController.text,
+          email: email,
+          password: password,
         );
+
+        final user = credential.user;
+
+        if (user != null) {
+          await _firestoreService.createUserProfile(
+            user: user,
+            name: name,
+          );
+        }
       } on FirebaseAuthException catch (e) {
         if (e.code == 'weak-password') {
           showSnackBarMessage('The password provided is too weak.');
@@ -73,6 +90,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -102,7 +120,23 @@ class _AuthScreenState extends State<AuthScreen> {
                     size: 80,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 10),
+                if (!_isLogin)
+                  TextFormField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      label: Text('Name'),
+                      hintText: 'Enter your name.',
+                    ),
+                    validator: (value) {
+                      if (value == null || value.trim().isEmpty) {
+                        return "Name is required!";
+                      } else {
+                        return null;
+                      }
+                    },
+                  ),
+                const SizedBox(height: 10),
                 TextFormField(
                   decoration: const InputDecoration(
                     label: Text('Email'),

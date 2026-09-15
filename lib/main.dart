@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
             );
           }
 
-          if (snapshot.data != null) {
+          if (snapshot.hasData) {
             return const HomeScreen();
           }
 
