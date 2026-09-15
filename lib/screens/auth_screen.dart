@@ -51,6 +51,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final password = _passwordController.text.trim();
 
     final isValid = _keyForm.currentState!.validate();
+
     if (isValid) {
       try {
         final credential =
