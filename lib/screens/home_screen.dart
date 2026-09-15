@@ -4,6 +4,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../models/asset_model.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../services/firestore_service.dart';
 import '../services/location_service.dart';
 import 'work_log_screen.dart';
@@ -77,6 +78,25 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Home Screen'),
         centerTitle: true,
         actions: [
+          ElevatedButton.icon(
+            icon: const Icon(Icons.fingerprint),
+            label: const Text('Test Biom'),
+            onPressed: () async {
+              final authenticated = await BiometricService().authenticate();
+
+              if (!mounted) return;
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    authenticated
+                        ? 'Biometric authentication successful.'
+                        : 'Biometric authentication failed.',
+                  ),
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.assignment),
             tooltip: 'Work Log',
