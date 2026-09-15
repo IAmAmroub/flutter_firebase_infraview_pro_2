@@ -1,15 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import '../services/session_service.dart';
 import 'firestore_service.dart';
 
 class AuthService {
   final FirestoreService _firestoreService = FirestoreService();
+  final SessionService _sessionService = SessionService();
 
   void login(String email, password, var context) async {
     try {
       final credential = await FirebaseAuth.instance
           .signInWithEmailAndPassword(email: email, password: password);
+
+      await _sessionService.skipBiometricOnce();
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
         //  if (!mounted) return;
@@ -34,6 +37,7 @@ class AuthService {
 
       final user = credential.user;
 
+      await _sessionService.skipBiometricOnce();
       if (user != null) {
         await _firestoreService.createUserProfile(
           user: user,
@@ -58,7 +62,8 @@ class AuthService {
     );
   }
 
-  signOut() {
+  signOut() async {
     FirebaseAuth.instance.signOut();
+    await SessionService().clear();
   }
 }

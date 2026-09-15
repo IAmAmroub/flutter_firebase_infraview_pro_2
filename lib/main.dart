@@ -5,6 +5,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_firebase_infraview_pro_2/screens/home_screen.dart';
 import 'firebase_options.dart';
 import 'screens/biometric_gate_screen.dart';
+import 'screens/auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -33,7 +34,7 @@ class MyApp extends StatelessWidget {
             );
           }
           if (snapshot.hasData) {
-            return const BiometricGateScreen();
+            return const AuthGate();
           }
 
           return const AuthScreen();
