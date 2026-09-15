@@ -76,11 +76,9 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Home Screen'),
-        centerTitle: true,
         actions: [
-          ElevatedButton.icon(
+          IconButton(
             icon: const Icon(Icons.fingerprint),
-            label: const Text('Test Biom'),
             onPressed: () async {
               final authenticated = await BiometricService().authenticate();
 
