@@ -1,8 +1,5 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
-import '../services/firestore_service.dart';
-import 'home_screen.dart';
+import 'package:flutter_firebase_infraview_pro_2/services/auth_service.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -12,36 +9,22 @@ class AuthScreen extends StatefulWidget {
 }
 
 class _AuthScreenState extends State<AuthScreen> {
-  final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService = AuthService();
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   final _keyForm = GlobalKey<FormState>();
   bool _isLogin = true;
 
   Future<void> login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
     final isValid = _keyForm.currentState!.validate();
     if (isValid) {
-      try {
-        final credential = await FirebaseAuth.instance
-            .signInWithEmailAndPassword(
-                email: _emailController.text,
-                password: _passwordController.text);
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'user-not-found') {
-          if (!mounted) return;
-          showSnackBarMessage('No user found for that email.');
-        } else if (e.code == 'wrong-password') {
-          if (!mounted) return;
-          showSnackBarMessage('Wrong password provided for that user.');
-        } else {
-          if (!mounted) return;
-          showSnackBarMessage(e.message.toString());
-        }
-      }
-    } else {
-      showSnackBarMessage('Inputs not valid!');
+      _authService.login(email, password, context);
     }
   }
 
@@ -53,39 +36,8 @@ class _AuthScreenState extends State<AuthScreen> {
     final isValid = _keyForm.currentState!.validate();
 
     if (isValid) {
-      try {
-        final credential =
-            await FirebaseAuth.instance.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
-
-        final user = credential.user;
-
-        if (user != null) {
-          await _firestoreService.createUserProfile(
-            user: user,
-            name: name,
-          );
-        }
-      } on FirebaseAuthException catch (e) {
-        if (e.code == 'weak-password') {
-          showSnackBarMessage('The password provided is too weak.');
-        } else if (e.code == 'email-already-in-use') {
-          showSnackBarMessage('The account already exists for that email.');
-        }
-      } catch (e) {
-        print(e);
-      }
-    } else {
-      showSnackBarMessage('The account already exists for that email.');
+      _authService.signUp(context, name, email, password);
     }
-  }
-
-  showSnackBarMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
   }
 
   @override
